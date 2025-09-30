@@ -14,14 +14,12 @@ const TrainingPage: React.FC = () => {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">ML Training</h2>
-        <p className="text-gray-600">
-          Train machine learning models using your datasets. Monitor training progress in real-time.
-        </p>
+    <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Training Jobs</h1>
+        <p className="text-gray-600">Manage your AI model training jobs</p>
       </div>
-
+      
       {/* Tab Navigation */}
       <div className="mb-6">
         <nav className="flex space-x-8">
@@ -51,14 +49,17 @@ const TrainingPage: React.FC = () => {
       </div>
 
       {/* Tab Content */}
-      <div>
-        {activeTab === 'create' && (
-          <TrainingJobForm onJobCreated={handleJobCreated} />
-        )}
-        
-        {activeTab === 'jobs' && (
-          <TrainingJobList key={refreshKey} />
-        )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          {activeTab === 'jobs' && (
+            <TrainingJobList key={refreshKey} />
+          )}
+        </div>
+        <div>
+          {activeTab === 'create' && (
+            <TrainingJobForm onJobCreated={handleJobCreated} />
+          )}
+        </div>
       </div>
     </div>
   );

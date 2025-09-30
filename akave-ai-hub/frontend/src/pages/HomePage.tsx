@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   DocumentTextIcon, 
-  CpuChipIcon, 
+  // CpuChipIcon, 
   BeakerIcon, 
   CodeBracketIcon,
   CloudArrowUpIcon,

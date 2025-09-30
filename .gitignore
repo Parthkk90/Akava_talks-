@@ -1,454 +1,58 @@
-# ==================================
-# AKAVE AI HUB - GITIGNORE
-# Decentralized AI Model & Dataset Management Platform
-# ==================================
-
-# ==================== NODE.JS ====================
+# Create .gitignore file
+cat > .gitignore << 'EOF'
 # Dependencies
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
+*/node_modules/
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
-
-# nyc test coverage
-.nyc_output
-
-# Grunt intermediate storage
-.grunt
-
-# Bower dependency directory
-bower_components
-
-# node-waf configuration
-.lock-wscript
-
-# Compiled binary addons
-build/Release
-
-# Dependency directories
-jspm_packages/
-
-# TypeScript cache
-*.tsbuildinfo
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# parcel-bundler cache
-.cache
-.parcel-cache
-
-# Next.js build output
-.next
-out
-
-# Nuxt.js build / generate output
-.nuxt
-dist
-
-# Gatsby files
-.cache/
-public
-
-# Storybook build outputs
-.out
-.storybook-out
-
-# Temporary folders
-tmp/
-temp/
-
-# ==================== ENVIRONMENT & CONFIG ====================
 # Environment variables
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
 .env.*.local
 
-# Configuration files with sensitive data
-config/local.js
-config/local.json
-config/production.js
-config/production.json
+# Build outputs
+dist/
+build/
+*/dist/
+*/build/
 
-# Database configuration
-database.json
-knexfile.js
+# Logs
+*.log
+logs/
 
-# ==================== SECURITY & CREDENTIALS ====================
-# Private keys and wallets
-*.pem
-*.key
-*.p12
-*.keystore
-wallets/
-private-keys/
-mnemonic.txt
-seed.txt
-
-# SSL certificates
-*.crt
-*.cer
-*.der
-
-# AWS credentials
-.aws/
-
-# Google Cloud credentials
-*.json
-gcloud-service-key.json
-
-# SSH keys
-id_rsa
-id_rsa.pub
-.ssh/
-
-# ==================== DATABASE ====================
-# SQLite databases
+# Database
 *.db
 *.sqlite
-*.sqlite3
+*.db-wal
+*.db-shm
 
-# PostgreSQL dumps
-*.dump
-*.sql
+# Uploads and temporary files
+uploads/
+temp/
+tmp/
 
-# Database migration temporary files
-migrations/*.js.map
+# IDE
+.vscode/
+.idea/
 
-# Database seeds with sensitive data
-seeds/production/
-seeds/*.sql
+# OS
+.DS_Store
+Thumbs.db
 
-# ==================== AI/ML SPECIFIC ====================
-# Training data and datasets
-data/
+# Cache
+.cache/
+.npm/
+.eslintcache
+
+# AI/ML specific
+models/
 datasets/
 training-data/
-test-data/
-*.csv
-*.json
-*.parquet
-*.h5
-*.hdf5
-
-# Model files and checkpoints
-models/
 checkpoints/
 *.pth
 *.pkl
-*.joblib
 *.h5
-*.pb
-*.onnx
-*.tflite
-*.pt
-*.model
-*.weights
 
-# Training artifacts
-training/
-experiments/
-runs/
-logs/training/
-tensorboard-logs/
-
-# Jupyter notebook checkpoints
-.ipynb_checkpoints/
-*.ipynb
-
-# Python ML cache
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Virtual environments
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-.venv/
-
-# ==================== BLOCKCHAIN & WEB3 ====================
-# Hardhat
+# Blockchain
 cache/
 artifacts/
-typechain/
-typechain-types/
-
-# Truffle
-build/contracts/
-
-# Ganache
-.ganache/
-
-# Metamask artifacts
-.metamask/
-
-# Contract deployment artifacts
-deployments/localhost/
-deployments/hardhat/
-
-# Gas reports
-gas-report.txt
-
-# Coverage reports for Solidity
-coverage.json
-coverageEnv/
-
-# ==================== STORAGE & FILE MANAGEMENT ====================
-# Uploaded files and temporary storage
-uploads/
-temp-uploads/
-downloads/
-cache/
-.cache/
-
-# IPFS related
-.ipfs/
-ipfs-repo/
-
-# Akave storage cache
-akave-cache/
-.akave/
-
-# File processing temporary directories
-processing/
-tmp-files/
-
-# ==================== DEVELOPMENT & TESTING ====================
-# IDEs and editors
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-
-# Testing
-test-results/
-coverage/
-.nyc_output/
-junit.xml
-
-# Storybook
-storybook-static/
-
-# ==================== DOCKER ====================
-# Docker
-.dockerignore
-docker-compose.override.yml
-.docker/
-
-# ==================== LOGS ====================
-# Log files
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-
-# Application logs
-app.log
-error.log
-combined.log
-access.log
-
-# PM2 logs
-.pm2/
-
-# ==================== SYSTEM FILES ====================
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Windows
-*.stackdump
-desktop.ini
-
-# Linux
-*~
-.fuse_hidden*
-.directory
-.Trash-*
-
-# ==================== CLI SPECIFIC ====================
-# CLI configuration
-.akave-cli/
-cli-config.json
-user-preferences.json
-
-# CLI cache
-.cli-cache/
-command-history.txt
-
-# ==================== FRONTEND (if applicable) ====================
-# React/Next.js
-.next/
-out/
-build/
-
-# Webpack
-webpack-stats.json
-
-# Bundle analyzer
-.bundle-analyzer/
-
-# ==================== MONITORING & ANALYTICS ====================
-# Monitoring data
-metrics/
-analytics/
-monitoring/
-
-# Error tracking
-sentry.properties
-
-# ==================== BACKUP & TEMPORARY ====================
-# Backup files
-*.bak
-*.backup
-*.tmp
-*.temp
-
-# Archive files
-*.zip
-*.tar.gz
-*.rar
-*.7z
-
-# ==================== CUSTOM AKAVE IGNORES ====================
-# Training job directories (created dynamically)
-training-jobs/
-job-*/
-
-# Model registry cache
-model-registry-cache/
-
-# Blockchain sync data
-blockchain-data/
-
-# API keys and tokens (additional security)
-api-keys/
-tokens/
-jwt-secrets/
-
-# Akave specific configuration
-akave-config.json
-node-config.json
-gpu-registry.json
-
-# Performance benchmarks
-benchmarks/
-performance-logs/
-
-# User-uploaded content (handled by decentralized storage)
-user-content/
-public-models/
-shared-datasets/
-
-# Migration and deployment scripts (environment-specific)
-deploy/production/
-deploy/staging/
-migration-scripts/production/
-
-# ==================== DEVELOPMENT NOTES ====================
-# Development notes and TODO files
-TODO.md
-NOTES.md
-DEVELOPMENT.md
-.todo
-notes/
-docs/private/
-
-# Scratch files
-scratch/
-playground/
-test-files/
-experiments/
-
-# ==================== END ====================
-# Frontend specific
-/.next/
-/out/
-/build/
-/dist/
-
-# Styles
-*.css.map
-
-# Environment
-.env.local
-.env.production.local
-
-# PWA files
-**/sw.js
-**/workbox-*.js
-**/worker-*.js
-**/fallback-*.js
-
-# CLI specific
-node_modules/
-*.log
-.env
-
-# User configuration
-config/
-.akave-cli-config
-user-settings.json
-
-# Temporary files
-temp/
-.tmp/
+EOF

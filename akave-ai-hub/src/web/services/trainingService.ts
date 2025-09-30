@@ -11,7 +11,6 @@ export interface TrainingConfig {
   datasetIds: string[];
   hyperparameters: Record<string, any>;
   framework: 'pytorch' | 'tensorflow' | 'sklearn';
-  scriptPath?: string;
   customScript?: string;
 }
 
@@ -232,32 +231,32 @@ def train_model():
             loss.backward()
             optimizer.step()
             
-            total_loss += loss.item()
+            total_loss += loss.item();
             
-            # Send progress update
-            progress = (epoch * len(train_loader) + batch_idx) / (epochs * len(train_loader))
+            // Send progress update
+            progress = (epoch * len(train_loader) + batch_idx) / (epochs * len(train_loader));
             metrics = {
                 'epoch': epoch,
                 'batch': batch_idx,
                 'loss': loss.item(),
                 'progress': progress,
                 'timestamp': datetime.now().isoformat()
-            }
+            };
             
-            # Write metrics to file for the service to read
+            // Write metrics to file for the service to read
             with open('/tmp/training_metrics.json', 'w') as f:
-                json.dump(metrics, f)
+                json.dump(metrics, f);
         
-        avg_loss = total_loss / len(train_loader)
-        print(f'Epoch {epoch}, Average Loss: {avg_loss:.4f}')
+        avg_loss = total_loss / len(train_loader);
+        print(f'Epoch {epoch}, Average Loss: {avg_loss:.4f}');
     
-    # Save model
-    model_path = '/tmp/trained_model.pth'
-    torch.save(model.state_dict(), model_path)
-    print(f'Model saved to {model_path}')
+    // Save model
+    model_path = '/tmp/trained_model.pth';
+    torch.save(model.state_dict(), model_path);
+    print(f'Model saved to {model_path}');
 
 if __name__ == '__main__':
-    train_model()
+    train_model();
 `;
   }
 
@@ -297,7 +296,7 @@ def train_model():
         optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
         loss='sparse_categorical_crossentropy',
         metrics=['accuracy']
-    )
+    );
     
     # Training
     class ProgressCallback(tf.keras.callbacks.Callback):
@@ -308,9 +307,9 @@ def train_model():
                 'accuracy': logs.get('accuracy', 0),
                 'progress': (epoch + 1) / epochs,
                 'timestamp': datetime.now().isoformat()
-            }
+            };
             with open('/tmp/training_metrics.json', 'w') as f:
-                json.dump(metrics, f)
+                json.dump(metrics, f);
     
     model.fit(
         datasets[0],  # X
@@ -319,15 +318,15 @@ def train_model():
         batch_size=batch_size,
         callbacks=[ProgressCallback()],
         verbose=1
-    )
+    );
     
     # Save model
-    model_path = '/tmp/trained_model'
-    model.save(model_path)
-    print(f'Model saved to {model_path}')
+    model_path = '/tmp/trained_model';
+    model.save(model_path);
+    print(f'Model saved to {model_path}');
 
 if __name__ == '__main__':
-    train_model()
+    train_model();
 `;
   }
 
@@ -366,31 +365,31 @@ def train_model():
         n_estimators=n_estimators,
         max_depth=max_depth,
         random_state=42
-    )
+    );
     
-    model.fit(X_train, y_train)
+    model.fit(X_train, y_train);
     
     # Evaluate
-    y_pred = model.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
+    y_pred = model.predict(X_test);
+    accuracy = accuracy_score(y_test, y_pred);
     
     # Send final metrics
     metrics = {
         'accuracy': accuracy,
         'progress': 1.0,
         'timestamp': datetime.now().isoformat()
-    }
+    };
     with open('/tmp/training_metrics.json', 'w') as f:
-        json.dump(metrics, f)
+        json.dump(metrics, f);
     
     # Save model
-    model_path = '/tmp/trained_model.pkl'
+    model_path = '/tmp/trained_model.pkl';
     with open(model_path, 'wb') as f:
-        pickle.dump(model, f)
-    print(f'Model saved to {model_path}')
+        pickle.dump(model, f);
+    print(f'Model saved to {model_path}');
 
 if __name__ == '__main__':
-    train_model()
+    train_model();
 `;
   }
 

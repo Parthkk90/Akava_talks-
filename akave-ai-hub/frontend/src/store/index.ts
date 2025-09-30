@@ -2,6 +2,18 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../services/api';
 
+// Fix: Add proper window.ethereum type declaration
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: any[] }) => Promise<any>;
+      isMetaMask?: boolean;
+      on?: (event: string, handler: (...args: any[]) => void) => void;
+      removeListener?: (event: string, handler: (...args: any[]) => void) => void;
+    };
+  }
+}
+
 interface User {
   id: string;
   walletAddress: string;
@@ -58,12 +70,26 @@ export const useStore = create<AppState>()(
 
           const walletAddress = accounts[0];
 
-          // Call your backend auth endpoint
-          const response = await api.post('/auth/login', { walletAddress });
-          
-          const { token, user } = response.data.data;
+          // 1. Get challenge from backend
+          const challengeResponse = await api.post('/auth/wallet/challenge', { walletAddress });
+          const { nonce, message } = challengeResponse.data.data;
 
-          // Store auth data
+          // 2. Sign the message using ethers
+          const { ethers } = await import('ethers');
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+          const signature = await signer.signMessage(message);
+
+          // 3. Verify signature and get token
+          const verifyResponse = await api.post('/auth/wallet/verify', {
+            walletAddress,
+            signature,
+            nonce
+          });
+
+          const { token, user } = verifyResponse.data.data;
+
+          // 4. Update state
           set({ 
             isAuthenticated: true,
             user,
@@ -78,15 +104,16 @@ export const useStore = create<AppState>()(
 
         } catch (error: any) {
           console.error('Login failed:', error);
+          const errorMessage = error.response?.data?.message || error.message || 'Login failed';
           set({ 
-            error: error.message,
+            error: errorMessage,
             isConnecting: false,
             isAuthenticated: false,
             user: null,
             token: null,
             walletAddress: null
           });
-          throw error;
+          throw new Error(errorMessage);
         }
       },
 
@@ -122,6 +149,7 @@ export const useStore = create<AppState>()(
           set({ isAuthenticated: true });
           
         } catch (error) {
+          console.error('Token verification failed:', error);
           // Token is invalid, logout
           get().logout();
         }
