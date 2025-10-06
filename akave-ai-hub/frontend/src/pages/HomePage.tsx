@@ -7,7 +7,7 @@ import {
   CloudArrowUpIcon,
   ChartBarIcon
 } from '@heroicons/react/24/outline';
-import { useStore } from '../store';
+import { useAppStore } from '../store';
 import api from '../services/api';
 
 interface DashboardStats {
@@ -20,7 +20,7 @@ interface DashboardStats {
 }
 
 const HomePage: React.FC = () => {
-  const { user } = useStore();
+  const { user } = useAppStore();
   const [stats, setStats] = useState<DashboardStats>({
     totalFiles: 0,
     totalQueries: 0,

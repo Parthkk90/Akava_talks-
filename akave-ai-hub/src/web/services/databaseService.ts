@@ -46,6 +46,22 @@ type User = {
   createdAt: string;
 };
 
+type QueryResult = {
+  id: string;
+  query: string;
+  datasetIds: string[];
+  outputFormat: string;
+  status: 'pending' | 'executing' | 'completed' | 'failed';
+  result?: any;
+  error?: string;
+  executionTime?: number;
+  rowCount?: number;
+  columns?: string[];
+  createdAt: string;
+  completedAt?: string;
+  userId: string;
+};
+
 export class DatabaseService {
   private db!: Database.Database;
   private dbPath: string;
@@ -110,6 +126,23 @@ export class DatabaseService {
           startedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
           completedAt DATETIME,
           metrics TEXT DEFAULT '{}',
+          userId TEXT NOT NULL,
+          FOREIGN KEY (userId) REFERENCES users (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS query_results (
+          id TEXT PRIMARY KEY,
+          query TEXT NOT NULL,
+          datasetIds TEXT NOT NULL,
+          outputFormat TEXT NOT NULL,
+          status TEXT CHECK(status IN ('pending', 'executing', 'completed', 'failed')) DEFAULT 'pending',
+          result TEXT,
+          error TEXT,
+          executionTime INTEGER,
+          rowCount INTEGER,
+          columns TEXT,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          completedAt DATETIME,
           userId TEXT NOT NULL,
           FOREIGN KEY (userId) REFERENCES users (id)
         );
@@ -236,9 +269,124 @@ export class DatabaseService {
     return stmt.all(userId, limit, offset) as TrainingJob[];
   }
 
+  async updateManifest(id: string, updates: Partial<Manifest>): Promise<Manifest | null> {
+    const updateFields: string[] = [];
+    const values: any[] = [];
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value !== undefined && key !== 'id') {
+        updateFields.push(`${key} = ?`);
+        values.push(value);
+      }
+    });
+    
+    if (updateFields.length === 0) return null;
+    
+    values.push(id);
+    const query = `UPDATE manifests SET ${updateFields.join(', ')} WHERE id = ? RETURNING *`;
+    
+    const stmt = this.db.prepare(query);
+    const result = stmt.get(...values) as Manifest | undefined;
+    
+    return result || null;
+  }
+
   async deleteManifest(id: string): Promise<void> {
     const stmt = this.db.prepare('DELETE FROM manifests WHERE id = ?');
     stmt.run(id);
+  }
+
+  // Query result methods
+  async createQueryResult(queryResult: QueryResult): Promise<QueryResult> {
+    const stmt = this.db.prepare(`
+      INSERT INTO query_results (
+        id, query, datasetIds, outputFormat, status, result, error, 
+        executionTime, rowCount, columns, createdAt, completedAt, userId
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *
+    `);
+    
+    return stmt.get(
+      queryResult.id,
+      queryResult.query,
+      JSON.stringify(queryResult.datasetIds),
+      queryResult.outputFormat,
+      queryResult.status,
+      queryResult.result ? JSON.stringify(queryResult.result) : null,
+      queryResult.error,
+      queryResult.executionTime,
+      queryResult.rowCount,
+      queryResult.columns ? JSON.stringify(queryResult.columns) : null,
+      queryResult.createdAt,
+      queryResult.completedAt,
+      queryResult.userId
+    ) as QueryResult;
+  }
+
+  async updateQueryResult(id: string, updates: Partial<QueryResult>): Promise<QueryResult | null> {
+    const updateFields: string[] = [];
+    const values: any[] = [];
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value !== undefined && key !== 'id') {
+        updateFields.push(`${key} = ?`);
+        if (key === 'datasetIds' || key === 'result' || key === 'columns') {
+          values.push(typeof value === 'string' ? value : JSON.stringify(value));
+        } else {
+          values.push(value);
+        }
+      }
+    });
+    
+    if (updateFields.length === 0) return null;
+    
+    values.push(id);
+    const query = `UPDATE query_results SET ${updateFields.join(', ')} WHERE id = ? RETURNING *`;
+    
+    const stmt = this.db.prepare(query);
+    const result = stmt.get(...values) as any;
+    
+    if (result) {
+      // Parse JSON fields
+      result.datasetIds = JSON.parse(result.datasetIds);
+      if (result.result) result.result = JSON.parse(result.result);
+      if (result.columns) result.columns = JSON.parse(result.columns);
+    }
+    
+    return result || null;
+  }
+
+  async getQueryResult(id: string, userId?: string): Promise<QueryResult | null> {
+    const stmt = this.db.prepare(
+      userId 
+        ? 'SELECT * FROM query_results WHERE id = ? AND userId = ?' 
+        : 'SELECT * FROM query_results WHERE id = ?'
+    );
+    
+    const result = stmt.get(userId ? id : id, ...(userId ? [userId] : [])) as any;
+    
+    if (result) {
+      // Parse JSON fields
+      result.datasetIds = JSON.parse(result.datasetIds);
+      if (result.result) result.result = JSON.parse(result.result);
+      if (result.columns) result.columns = JSON.parse(result.columns);
+    }
+    
+    return result || null;
+  }
+
+  async listQueryResults(userId: string, limit = 10, offset = 0): Promise<QueryResult[]> {
+    const stmt = this.db.prepare(
+      'SELECT * FROM query_results WHERE userId = ? ORDER BY createdAt DESC LIMIT ? OFFSET ?'
+    );
+    const results = stmt.all(userId, limit, offset) as any[];
+    
+    return results.map(result => {
+      // Parse JSON fields
+      result.datasetIds = JSON.parse(result.datasetIds);
+      if (result.result) result.result = JSON.parse(result.result);
+      if (result.columns) result.columns = JSON.parse(result.columns);
+      return result;
+    });
   }
 
   // Utility methods

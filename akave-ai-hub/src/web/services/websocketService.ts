@@ -123,6 +123,10 @@ export class WebSocketService extends EventEmitter {
     return false;
   }
 
+  public broadcastToUser(userId: string, type: string, payload: any): boolean {
+    return this.sendMessage(userId, { type, payload });
+  }
+
   public broadcast(message: WebSocketMessage): void {
     this.clients.forEach((client, userId) => {
       if (client.readyState === WebSocket.OPEN) {

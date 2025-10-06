@@ -1,8 +1,8 @@
 import React from 'react';
-import { useStore } from '../../store';
+import { useAppStore } from '../../store';
 
 const Header: React.FC = () => {
-  const { isAuthenticated, walletAddress, login, logout } = useStore();
+  const { isAuthenticated, walletAddress, login, logout } = useAppStore();
 
   return (
     <header className="bg-white shadow-md p-4 flex justify-between items-center">

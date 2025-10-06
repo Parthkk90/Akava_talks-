@@ -40,6 +40,7 @@ export interface TrainingMetrics {
 export class TrainingService {
   private activeJobs: Map<string, ChildProcess> = new Map();
   private jobLogs: Map<string, string[]> = new Map();
+  private jobConfigs: Map<string, TrainingConfig> = new Map();
 
   constructor(
     private dbService: DatabaseService,
@@ -60,9 +61,12 @@ export class TrainingService {
       status: 'pending',
       progress: 0,
       metrics: JSON.stringify({}),
-      userId,
-      config: JSON.stringify(config)
+      userId
     });
+
+    // Store the config and logs in memory for this job
+    this.jobConfigs.set(job.id, config);
+    this.jobLogs.set(job.id, []);
 
     // Start the training process asynchronously
     this.executeTrainingJob(job.id, config).catch(error => {
@@ -70,7 +74,12 @@ export class TrainingService {
       this.updateJobStatus(job.id, 'failed', 0, { error: error.message });
     });
 
-    return job;
+    // Return extended job object
+    return {
+      ...job,
+      config: JSON.stringify(config),
+      logs: []
+    };
   }
 
   /**
@@ -485,14 +494,14 @@ if __name__ == '__main__':
       const checkpointPath = path.join(trainingDir, 'trained_model');
       if (fs.existsSync(checkpointPath)) {
         const checkpointKey = `models/${jobId}/checkpoint`;
-        await this.akaveService.uploadFile(checkpointPath, checkpointKey);
+        await this.akaveService.uploadFileFromPath(checkpointPath, checkpointKey, 'application/octet-stream');
         
-        // Update job with checkpoint path
+        // Update job with checkpoint path - store in metrics for now
         await this.dbService.updateTrainingJob(jobId, {
-          checkpointPath: checkpointKey,
           status: 'completed',
           progress: 100,
-          completedAt: new Date().toISOString()
+          completedAt: new Date().toISOString(),
+          metrics: JSON.stringify({ checkpointPath: checkpointKey })
         });
       }
 

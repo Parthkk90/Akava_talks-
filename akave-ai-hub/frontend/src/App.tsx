@@ -230,14 +230,14 @@ const LoginPage: React.FC = () => {
 
 // Main App Component
 function App() {
-  const { isAuthenticated, checkAuth } = useAppStore();
+  const { isAuthenticated } = useAppStore();
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     const initializeApp = async () => {
       try {
         // Check if user was previously authenticated
-        await checkAuth();
+        // Authentication will be handled by the store internally
       } catch (error) {
         console.error('Auth initialization failed:', error);
       } finally {
@@ -246,7 +246,7 @@ function App() {
     };
 
     initializeApp();
-  }, [checkAuth]);
+  }, []);
 
   // Show loading spinner during initialization
   if (isInitializing) {

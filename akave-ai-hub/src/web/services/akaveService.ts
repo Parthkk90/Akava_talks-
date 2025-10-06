@@ -79,6 +79,27 @@ export class AkaveService {
     }
   }
 
+  async uploadFileFromPath(filePath: string, key: string, contentType: string = 'application/octet-stream'): Promise<string> {
+    const fs = await import('fs');
+    const fileBuffer = await fs.promises.readFile(filePath);
+
+    const uploadParams = {
+      Bucket: this.bucketName,
+      Key: key,
+      Body: fileBuffer,
+      ContentType: contentType,
+    };
+
+    try {
+      const command = new PutObjectCommand(uploadParams);
+      await this.s3Client.send(command);
+      return key;
+    } catch (error) {
+      console.error('Error uploading file from path to Akave O3:', error);
+      throw new Error('Failed to upload file from path.');
+    }
+  }
+
   async getPresignedUrl(key: string, expiresIn = 3600): Promise<string> {
     const command = new GetObjectCommand({ Bucket: this.bucketName, Key: key });
     try {

@@ -1,5 +1,9 @@
 import { DatabaseService } from './databaseService';
 import { AkaveService } from './akaveService';
+import Database from 'better-sqlite3';
+import path from 'path';
+import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface QueryRequest {
   query: string;
@@ -59,42 +63,210 @@ export interface QueryExample {
 }
 
 export class QueryService {
+  private queryDatabase?: Database.Database;
+  
   constructor(
     private dbService: DatabaseService,
     private akaveService: AkaveService
   ) {}
 
-  // Backend methods would be implemented here
-  // For now, we'll just have placeholder methods
-  
+  /**
+   * Initialize in-memory SQLite database for queries
+   */
+  private async initQueryDatabase(): Promise<Database.Database> {
+    if (!this.queryDatabase) {
+      this.queryDatabase = new Database(':memory:');
+    }
+    return this.queryDatabase;
+  }
+
+  /**
+   * Load dataset into SQLite table
+   */
+  private async loadDatasetIntoDatabase(
+    db: Database.Database, 
+    datasetId: string, 
+    tableName: string
+  ): Promise<{ rowCount: number; columns: string[] }> {
+    // Get dataset manifest
+    const manifest = await this.dbService.getManifestById(datasetId);
+    if (!manifest) {
+      throw new Error(`Dataset ${datasetId} not found`);
+    }
+
+    // Download dataset to temp location
+    const tempDir = path.join(process.cwd(), 'temp', 'queries');
+    await fs.promises.mkdir(tempDir, { recursive: true });
+    const tempFilePath = path.join(tempDir, manifest.filename);
+    
+    await this.akaveService.downloadFile(manifest.s3Key, tempFilePath);
+
+    // Parse CSV and load into database
+    const csvContent = await fs.promises.readFile(tempFilePath, 'utf-8');
+    const lines = csvContent.trim().split('\n');
+    
+    if (lines.length === 0) {
+      throw new Error('Dataset is empty');
+    }
+
+    // Parse header
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const sanitizedHeaders = headers.map(h => h.replace(/[^a-zA-Z0-9_]/g, '_'));
+    
+    // Create table
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS ${tableName} (
+        ${sanitizedHeaders.map(h => `"${h}" TEXT`).join(', ')}
+      )
+    `;
+    db.exec(createTableSQL);
+
+    // Prepare insert statement
+    const insertSQL = `INSERT INTO ${tableName} (${sanitizedHeaders.map(h => `"${h}"`).join(', ')}) VALUES (${sanitizedHeaders.map(() => '?').join(', ')})`;
+    const insert = db.prepare(insertSQL);
+
+    // Insert data
+    let rowCount = 0;
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      if (values.length === headers.length) {
+        insert.run(values);
+        rowCount++;
+      }
+    }
+
+    // Clean up temp file
+    await fs.promises.unlink(tempFilePath);
+
+    return { rowCount, columns: sanitizedHeaders };
+  }
+
+  /**
+   * Execute SQL query
+   */
   async executeQuery(userId: string, request: QueryRequest): Promise<QueryResult> {
-    // This would execute the actual query in a real implementation
-    const queryResult: QueryResult = {
-      id: Date.now().toString(),
-      query: request.query,
-      datasetIds: request.datasetIds,
-      outputFormat: request.outputFormat,
-      status: 'completed',
-      result: { message: 'Query executed successfully' },
-      createdAt: new Date().toISOString(),
-      userId: userId
-    };
-    
-    // Save to database
-    // In a real implementation, this would save to a queries table
-    
-    return queryResult;
+    const queryId = uuidv4();
+    const startTime = Date.now();
+
+    try {
+      // Create query result record
+      const queryResult: QueryResult = {
+        id: queryId,
+        query: request.query,
+        datasetIds: request.datasetIds,
+        outputFormat: request.outputFormat,
+        status: 'executing',
+        createdAt: new Date().toISOString(),
+        userId
+      };
+
+      // Save initial query record to database
+      await this.dbService.createQueryResult(queryResult);
+
+      // Initialize query database
+      const db = await this.initQueryDatabase();
+
+      // Load datasets into temporary tables
+      const tableInfos: Array<{ datasetId: string; tableName: string; rowCount: number; columns: string[] }> = [];
+      
+      for (let i = 0; i < request.datasetIds.length; i++) {
+        const datasetId = request.datasetIds[i];
+        const tableName = `dataset_${i + 1}`;
+        
+        const { rowCount, columns } = await this.loadDatasetIntoDatabase(db, datasetId, tableName);
+        tableInfos.push({ datasetId, tableName, rowCount, columns });
+      }
+
+      // Replace dataset names in query with actual table names
+      let processedQuery = request.query;
+      request.datasetIds.forEach((datasetId, index) => {
+        const tableName = `dataset_${index + 1}`;
+        processedQuery = processedQuery.replace(new RegExp(datasetId, 'g'), tableName);
+      });
+
+      // Apply limit if specified
+      if (request.limit && !processedQuery.toLowerCase().includes('limit')) {
+        processedQuery += ` LIMIT ${request.limit}`;
+      }
+
+      // Execute query
+      const stmt = db.prepare(processedQuery);
+      const rows = stmt.all() as any[];
+      
+      const executionTime = Date.now() - startTime;
+
+      // Format result based on output format
+      let formattedResult: any;
+      let columns: string[] = [];
+      
+      if (rows.length > 0) {
+        columns = Object.keys(rows[0]);
+        
+        switch (request.outputFormat) {
+          case 'json':
+            formattedResult = rows;
+            break;
+          case 'csv':
+            const csvRows = [columns.join(',')];
+            rows.forEach((row: any) => {
+              csvRows.push(columns.map(col => `"${row[col] || ''}"`).join(','));
+            });
+            formattedResult = csvRows.join('\n');
+            break;
+          case 'table':
+          default:
+            formattedResult = {
+              columns,
+              rows: rows.map((row: any) => columns.map(col => row[col]))
+            };
+            break;
+        }
+      } else {
+        formattedResult = request.outputFormat === 'csv' ? '' : [];
+      }
+
+      // Update query result
+      const completedResult: QueryResult = {
+        ...queryResult,
+        status: 'completed',
+        result: formattedResult,
+        executionTime,
+        rowCount: rows.length,
+        columns,
+        completedAt: new Date().toISOString()
+      };
+
+      await this.dbService.updateQueryResult(queryId, completedResult);
+      return completedResult;
+
+    } catch (error: any) {
+      const executionTime = Date.now() - startTime;
+      
+      // Update query result with error
+      const failedResult: QueryResult = {
+        id: queryId,
+        query: request.query,
+        datasetIds: request.datasetIds,
+        outputFormat: request.outputFormat,
+        status: 'failed',
+        error: error.message,
+        executionTime,
+        createdAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        userId
+      };
+
+      await this.dbService.updateQueryResult(queryId, failedResult);
+      return failedResult;
+    }
   }
 
   async getQueryResult(userId: string, id: string): Promise<QueryResult | null> {
-    // In a real implementation, this would fetch from a queries table
-    // For now, we'll return null to indicate not found
-    return null;
+    return await this.dbService.getQueryResult(id, userId);
   }
 
   async listQueryResults(userId: string, limit: number = 10, offset: number = 0): Promise<QueryResult[]> {
-    // In a real implementation, this would fetch from a queries table
-    return [];
+    return await this.dbService.listQueryResults(userId, limit, offset);
   }
 
   async getStructuredDatasets(userId: string): Promise<StructuredDataset[]> {
